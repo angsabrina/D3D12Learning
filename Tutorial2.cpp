@@ -90,9 +90,34 @@ void Tutorial2::UpdateBufferResource(
     ThrowIfFailed(device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),              // pointer to properties for resource's heap
         D3D12_HEAP_FLAG_NONE,                                           // heap options
-        &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),              // 
-        D3D12_RESOURCE_STATE_COMMON,
-        nullptr,
-        IID_PPV_ARGS(pDestinationResource)));
+        &CD3DX12_RESOURCE_DESC::Buffer(bufferSize, flags),              // pointer to struct that describes resource
+        D3D12_RESOURCE_STATE_COMMON,                                    // initial state of resource
+        nullptr,                                                        // describes default value for clear color. must be NULL when used with D3D12_RESOURCE_DIMENSION_BUFFER
+        IID_PPV_ARGS(pDestinationResource)));                           // [out] pointer to crated resource object, when NULL no object will be created and S_FALSE is returned
 
-    
+    // Create an committed resource for the upload.
+    if (bufferData)
+    {
+        ThrowIfFailed(device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(bufferSize),
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            IID_PPV_ARGS(pIntermediateResource)));
+
+        // CPU buffer data can be transffered to GPU resources
+        D3D12_SUBRESOURCE_DATA subresourceData = {};
+        subresourceData.pData = bufferData;                                 // ptr to memory block that contains subresource data
+        subresourceData.RowPitch = bufferSize;                              // 
+        subresourceData.SlicePitch = subresourceData.RowPitch;              //
+
+        UpdateSubresources(commandList.Get(), 
+            *pDestinationResource,                                          //
+            *pIntermediateResource,                                         //
+            0,                                                              //
+            0,                                                              //
+            1,                                                              //
+            &subresourceData);                                              //
+    }
+}            
